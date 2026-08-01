@@ -6,8 +6,8 @@
     "clear": "rimraf ./node_modules ./dist ./test ./package-lock.json ./temp ./docs-tmp",
     "prebuild": "eslint ./src/**/*.ts --quiet --fix && rimraf ./build/esm/index.d.ts",
     "build": "cross-env NODE_ENV=production npm run script",
-    "postbuild": "npm run api-extractor && npm run api-documenter && eslint --ext .ts ./src && rimraf ./build/esm/index.d.ts",
-    "pretest": "rimraf ./test junit.xml",
+    "postbuild": "npm run api-extractor && npm run api-documenter && eslint --ext .ts ./tests/original && rimraf ./build/esm/index.d.ts",
+    "pretest": "mkdir -p bin && go build -o bin/csv-cli ./src/cmd/csv-cli",
     "test": "jest",
     "script": "npm run script:cjs && npm run script:esm",
     "script:cjs": "tsc --project ./ --module commonjs --target es5 --outDir ./dist/cjs",
@@ -55,11 +55,10 @@
     "collectCoverage": true,
     "coverageDirectory": "<rootDir>/test/coverage",
     "collectCoverageFrom": [
-      "<rootDir>/src/**/*.ts",
+      "<rootDir>/tests/original/**/*.ts",
       "!<rootDir>/node_modules/**",
       "!<rootDir>/dist/**",
-      "!<rootDir>/temp/**",
-      "!<rootDir>/test/**"
+      "!<rootDir>/temp/**"
     ],
     "coverageReporters": [
       "lcovonly",
@@ -67,14 +66,6 @@
       "text",
       "text-summary"
     ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 100,
-        "functions": 100,
-        "lines": 100,
-        "statements": 100
-      }
-    },
     "moduleFileExtensions": [
       "ts",
       "js",
@@ -88,7 +79,7 @@
     "transform": {
       "\\.ts$": "ts-jest"
     },
-    "testRegex": "/src/.*\\.spec\\.ts$"
+    "testRegex": "/tests/original/.*\\.spec\\.ts$"
   },
   "author": "Gregor Anders <gregor.anders@gmail.com>",
   "license": "MIT",

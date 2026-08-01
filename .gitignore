@@ -5,3 +5,4 @@ test/
 docs-tmp/
 
 package-lock.json
+bin/
