@@ -1,189 +1,148 @@
-[<img src="./typescript.svg" />][typescript-url]
+# ts-csv → Go Port
 
-# @gregoranders/csv
+> **Go port of [`@gregoranders/csv`](https://github.com/gregoranders/ts-csv)** — a simple CSV parser, ported from TypeScript to idiomatic Go.
 
-## Simple CSV parser in [TypeScript][typescript-url]
+[![License](https://img.shields.io/github/license/prathamkhatwani/ts-csv.svg)](https://github.com/prathamkhatwani/ts-csv/blob/trial/LICENSE)
 
-## [API Docs](./docs/index.md)
+## Original Repository
 
-[![License][license-image]][license-url]
-[![Issues][issues-image]][issues-url]
-[![Code maintainability][code-maintainability-image]][code-maintainability-url] [![Code issues][code-issues-image]][code-issues-url] [![Code Technical Debt][code-tech-debt-image]][code-tech-debt-url]
+This project is a complete port of the original TypeScript CSV parser by [@gregoranders](https://github.com/gregoranders):
 
-[![types][npm-types-image]][npm-types-url]
-[![node][node-image]][node-url]
+- **Upstream Repo:** [https://github.com/gregoranders/ts-csv](https://github.com/gregoranders/ts-csv)
+- **Upstream Version Ported:** `v0.0.13`
+- **Original License:** MIT
 
-[![Main Language][language-image]][code-metric-url] [![Languages][languages-image]][code-metric-url] [![Code Size][code-size-image]][code-metric-url] [![Repo-Size][repo-size-image]][code-metric-url]
+---
 
-## Features
+## Quick Start
 
-- [TypeScript][typescript-url]
-- [Jest][jest-url] Unit Tests with Code Coverage
-- GitHub CI Integration (feature, development, master, release)
-- Publish via CI
-- Code Quality via Code Climate
+### Prerequisites
 
-|                                                                  |                                                                            |                                                                              |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [![Release][release-image]][release-url]                         |                                                                            | [![npm][npm-image]][npm-url]                                                 |
-| [![Master Build][master-build-image]][master-url]                | [![Master Coverage][master-coveralls-image]][master-coveralls-url]         | [![Master Version][master-version-image]][master-version-url]                |
-| [![Development Build][development-build-image]][development-url] | [![Test Coverage][development-coveralls-image]][development-coveralls-url] | [![Development Version][development-version-image]][development-version-url] |
+- **Go** 1.18 or higher ([download](https://go.dev/dl/))
 
-## Example
+### Build (One Step)
 
-```sh
-npm install @gregoranders/csv
+```bash
+go build ./...
 ```
 
-```ts
-import Parser from '@gregoranders/csv';
+This compiles the core parser library and the CLI binary.
 
-const parser = new Parser();
-const rows = parser.parse('a,b,c\n1,2,3\n4,5,6');
+### Build the CLI Binary
+
+```bash
+go build -o bin/csv-cli ./src/cmd/csv-cli
 ```
 
-```ts
-console.log(JSON.stringify(rows, null, 2));
+### Run Tests
 
-[
-  [
-    "a",
-    "b",
-    "c"
-  ],
-  [
-    "1",
-    "2",
-    "3"
-  ],
-  [
-    "4",
-    "5",
-    "6"
-  ]
-]
+```bash
+go test -v ./tests/port/...
 ```
 
-```ts
-console.log(JSON.stringify(parser.rows, null, 2));
+### Run Benchmarks
 
-[
-  [
-    "a",
-    "b",
-    "c"
-  ],
-  [
-    "1",
-    "2",
-    "3"
-  ],
-  [
-    "4",
-    "5",
-    "6"
-  ]
-]
+```bash
+go test -bench=. -benchmem ./tests/port/...
 ```
 
-```ts
-console.log(JSON.stringify(parser.json, null, 2));
+### Run Fuzz Tests
 
-[
-  {
-    "a": "1",
-    "b": "2",
-    "c": "3"
-  },
-  {
-    "a": "4",
-    "b": "5",
-    "c": "6"
-  }
-]
+```bash
+go test -fuzz=FuzzParse -fuzztime=10s ./tests/port/...
 ```
 
-### Clone repository
+---
 
-```sh
-git clone https://github.com/gregoranders/ts-csv
+## Usage
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+
+    csv "github.com/prathamkhatwani/ts-csv/src"
+)
+
+func main() {
+    parser := csv.NewParser()
+
+    rows, err := parser.Parse("name,age,city\nAlice,30,NYC\nBob,25,LA")
+    if err != nil {
+        log.Fatalf("Parse error: %v", err)
+    }
+
+    fmt.Println("Rows:", rows)
+    fmt.Println("JSON:", parser.JSON())
+}
 ```
 
-### Install dependencies
-
-```sh
-npm install
+**Output:**
+```
+Rows: [[name age city] [Alice 30 NYC] [Bob 25 LA]]
+JSON: [map[age:30 city:NYC name:Alice] map[age:25 city:LA name:Bob]]
 ```
 
-### Build
+### Custom Delimiters
 
-```sh
-npm run build
+```go
+parser := csv.NewParser(csv.Configuration{
+    FieldSeparator: ";",
+    LineSeparator:  "\t",
+    Quote:          "'",
+})
+rows, _ := parser.Parse("a;b;c\t1;2;3")
 ```
 
-### Testing
+---
 
-#### Test using [Jest][jest-url]
+## Project Structure
 
-```sh
-npm test
+```
+├── src/
+│   ├── csv.go                  # Core parser (state machine)
+│   └── cmd/csv-cli/main.go     # CLI binary (JSON over stdin/stdout)
+├── tests/
+│   └── port/
+│       ├── csv_test.go          # Ported test suite (all original tests)
+│       └── csv_bench_test.go    # Benchmark suite (small/medium/large)
+├── fuzz/
+│   ├── harness.go               # Go native fuzz harness
+│   ├── worker/main.go           # IPC worker for differential fuzzing
+│   ├── differential_fuzzer.js   # Differential fuzz harness (TS vs Go)
+│   ├── differential_fuzz.log    # 65s fuzz log (508K inputs, 0 divergences)
+│   └── ts_csv_bundled.js        # Bundled original TS parser for comparison
+├── bench/
+│   ├── methodology.md           # Benchmark report with methodology
+│   └── results.json             # Machine-readable benchmark data
+├── go.mod                       # Go module definition
+├── BUILD.md                     # Build & run instructions
+├── DECISIONS.md                 # 12 architectural divergences with rationale
+├── BUG_REPORT.md                # Upstream bugs found via differential testing
+├── DIFFERENTIAL_FUZZING.md      # 65s differential fuzz survivor report
+├── ZERO_UNSAFE.md               # Zero unsafe audit report
+└── README.md                    # This file
 ```
 
-### Code Climate Checks [docker required](docs/CODECLIMATE.md)
+---
 
-```sh
-npm run codeclimate
-```
+## Verification & Reports
 
-### Clear
+| Deliverable | File | Status |
+|---|---|---|
+| Public repo with port | This repository | ✅ |
+| One-step build command | [`BUILD.md`](./BUILD.md) — `go build ./...` | ✅ |
+| Original test suite passing | [`tests/port/csv_test.go`](./tests/port/csv_test.go) | ✅ All pass |
+| Differential fuzz harness | [`DIFFERENTIAL_FUZZING.md`](./DIFFERENTIAL_FUZZING.md) — 508K inputs, 0 divergences | ✅ |
+| Decision log | [`DECISIONS.md`](./DECISIONS.md) — 12 architectural divergences | ✅ |
+| Benchmark report | [`bench/methodology.md`](./bench/methodology.md) | ✅ |
+| Bug report (upstream) | [`BUG_REPORT.md`](./BUG_REPORT.md) — 9 latent bugs found | ✅ |
+| Zero unsafe audit | [`ZERO_UNSAFE.md`](./ZERO_UNSAFE.md) | ✅ |
 
-```sh
-npm run clear
-```
+---
 
-[release-url]: https://github.com/gregoranders/ts-csv/releases
-[master-url]: https://github.com/gregoranders/ts-csv/tree/master
-[development-url]: https://github.com/gregoranders/ts-csv/tree/development
-[repository-url]: https://github.com/gregoranders/ts-csv
-[code-metric-url]: https://github.com/gregoranders/ts-csv/search?l=TypeScript
-[travis-url]: https://travis-ci.org/gregoranders/ts-csv
-[travis-image]: https://travis-ci.org/gregoranders/ts-csv.svg?branch=master
-[license-url]: https://github.com/gregoranders/ts-csv/blob/master/LICENSE
-[license-image]: https://img.shields.io/github/license/gregoranders/ts-csv.svg
-[master-version-url]: https://github.com/gregoranders/ts-csv/blob/master/package.json
-[master-version-image]: https://img.shields.io/github/package-json/v/gregoranders/ts-csv/master
-[development-version-url]: https://github.com/gregoranders/ts-csv/blob/development/package.json
-[development-version-image]: https://img.shields.io/github/package-json/v/gregoranders/ts-csv/development
-[issues-url]: https://github.com/gregoranders/ts-csv/issues
-[issues-image]: https://img.shields.io/github/issues-raw/gregoranders/ts-csv.svg
-[release-build-image]: https://github.com/gregoranders/ts-csv/workflows/Release%20CI/badge.svg
-[master-build-image]: https://github.com/gregoranders/ts-csv/workflows/Master%20CI/badge.svg
-[development-build-image]: https://github.com/gregoranders/ts-csv/workflows/Development%20CI/badge.svg
-[master-coveralls-url]: https://coveralls.io/github/gregoranders/ts-csv?branch=master
-[master-coveralls-image]: https://img.shields.io/coveralls/github/gregoranders/ts-csv/master
-[development-coveralls-image]: https://img.shields.io/coveralls/github/gregoranders/ts-csv/development
-[development-coveralls-url]: https://coveralls.io/github/gregoranders/ts-csv?branch=development
-[code-maintainability-url]: https://codeclimate.com/github/gregoranders/ts-csv/maintainability
-[code-maintainability-image]: https://img.shields.io/codeclimate/maintainability/gregoranders/ts-csv
-[code-issues-url]: https://codeclimate.com/github/gregoranders/ts-csv/maintainability
-[code-issues-image]: https://img.shields.io/codeclimate/issues/gregoranders/ts-csv
-[code-tech-debt-url]: https://codeclimate.com/github/gregoranders/ts-csv/maintainability
-[code-tech-debt-image]: https://img.shields.io/codeclimate/tech-debt/gregoranders/ts-csv
-[master-circleci-image]: https://circleci.com/gh/gregoranders/ts-csv/tree/master.svg?style=shield
-[master-circleci-url]: https://app.circleci.com/pipelines/github/gregoranders/ts-csv?branch=master
-[development-circleci-image]: https://circleci.com/gh/gregoranders/ts-csv/tree/development.svg?style=shield
-[development-circleci-url]: https://app.circleci.com/pipelines/github/gregoranders/ts-csv?branch=development
-[npm-url]: https://www.npmjs.com/package/@gregoranders/csv
-[npm-image]: https://img.shields.io/npm/v/@gregoranders/csv
-[node-url]: https://www.npmjs.com/package/@gregoranders/csv
-[node-image]: https://img.shields.io/node/v/@gregoranders/csv
-[npm-types-url]: https://www.npmjs.com/package/@gregoranders/csv
-[npm-types-image]: https://img.shields.io/npm/types/@gregoranders/csv
-[release-url]: https://www.npmjs.com/package/@gregoranders/csv
-[release-image]: https://img.shields.io/github/release/gregoranders/ts-csv
-[language-image]: https://img.shields.io/github/languages/top/gregoranders/ts-csv
-[languages-image]: https://img.shields.io/github/languages/count/gregoranders/ts-csv
-[code-size-image]: https://img.shields.io/github/languages/code-size/gregoranders/ts-csv
-[repo-size-image]: https://img.shields.io/github/repo-size/gregoranders/ts-csv
-[typescript-url]: http://www.typescriptlang.org/
-[jest-url]: https://jestjs.io
+## License
+
+[MIT](./LICENSE) — Original work by [Gregor Anders](https://github.com/gregoranders), Go port by [Pratham Khatwani](https://github.com/prathamkhatwani).
